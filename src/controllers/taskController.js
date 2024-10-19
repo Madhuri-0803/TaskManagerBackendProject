@@ -1,10 +1,14 @@
 const Task = require('../models/Task');
 const io = require('../services/socketService').getSocketInstance();
+const { createTaskSchema, getTasksSchema, updateTaskSchema, deleteTaskSchema } = require('../schemaValidation/taskSchema');
 
 exports.createTask = async (req, res) => {
 
     try {
         const { title, description, priority, dueDate, assignees } = req.body;
+
+        const { error } = createTaskSchema.validate(req.body);
+        if (error) return res.status(400).json({ message: error.details[0].message });
 
         // Check if required fields are present
         if (!title || !priority || !dueDate || !assignees) {
@@ -25,7 +29,7 @@ exports.createTask = async (req, res) => {
 
         res.status(201).json(savedTask);  // Return the created task
     } catch (error) {
-        console.error('Error creating task:', error); 
+        console.error('Error creating task:', error);
         res.status(500).json({ message: "Error creating task" });
     }
 
@@ -36,7 +40,9 @@ exports.getTasks = async (req, res) => {
     const { status, priority, assignees, page = 1, limit = 10 } = req.query;
     const query = {};
 
-    // Add filters to the query object only if they are provided
+    const { error } = getTasksSchema.validate(req.query);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
     if (status) {
         query.status = status;
     }
@@ -74,8 +80,15 @@ exports.getTasks = async (req, res) => {
 exports.updateTask = async (req, res) => {
     const { title, description, priority, dueDate, status, assignees } = req.body;
 
+    const { error } = updateTaskSchema.validate({ id: req.params.id, title, description, priority, dueDate, status, assignees });
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
     try {
         const taskId = req.params.id;
+
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Access forbidden: insufficient rights' });
+        }
 
         // Find the task by ID and update it
         const updatedTask = await Task.findByIdAndUpdate(
@@ -97,13 +110,16 @@ exports.updateTask = async (req, res) => {
 
         res.status(200).json(updatedTask);
     } catch (error) {
-        console.error('Error updating task:', error); 
-        res.status(500).json({ message: 'Error updating task', error: error.message }); 
+        console.error('Error updating task:', error);
+        res.status(500).json({ message: 'Error updating task', error: error.message });
     }
 };
 
 exports.deleteTask = async (req, res) => {
     const taskId = req.params.id;
+
+    const { error } = deleteTaskSchema.validate({ id: taskId });
+    if (error) return res.status(400).json({ message: 'Invalid Task ID' });
 
     try {
         // Check if the user has permission to delete the task
@@ -119,7 +135,7 @@ exports.deleteTask = async (req, res) => {
         }
 
         // Emit the task deleted event
-        io.emit('taskDeleted', taskId); 
+        // io.emit('taskDeleted', taskId); 
 
         // Respond with a success message
         res.status(200).json({ message: 'Task deleted successfully' });

@@ -26,10 +26,16 @@ This project aims to build a scalable backend for an advanced Task Management Ap
 ## Deployment
 - Deploy the backend API to a cloud provider of your choice (e.g., AWS, Google Cloud, Heroku).
 
+## Environmental Variable 
+- MONGO_URI - Your Mongodb Connection URl
+- JWT_SECRET - Your JWT token
+- PORT - Your server port
+
 ## Getting Started
 1. Clone the repository.
 2. Install dependencies:
    ```bash
    npm install
 3. Run the code:
-    npm start
+   ```bash
+   npm start
